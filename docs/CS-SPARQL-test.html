@@ -1,0 +1,116 @@
+<html>
+<head jang="ja">
+<meta charset="UTF-8">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
+
+<!-- for 'layout: "dagre"' -->
+<script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+<script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
+
+<script type="text/javascript" src="sparql.js" charset="UTF-8"></script>
+<style>
+#cy {
+  width: 100%;  /* MUST */
+  height: 100%;  /* MUST */
+
+  /**
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 999;
+  */
+}
+</style>
+</head>
+<body>
+<div id="cy"></div>
+
+<script>
+
+	//SPARQLエンドポイントの初期設定
+	var endpoint = "https://query.wikidata.org/sparql";
+
+	//SPARQLクエリの初期設定
+	var query ="select * {<http://www.wikidata.org/entity/Q7105556> ?p ?o} LIMIT 5";
+
+	//SPARQLクエリの実行（sparql.jsで定義している関数を利用）
+		qr = sendQuery(endpoint, query);
+		
+		qr.fail(//クエリが失敗したときの処理
+			function (xhr, textStatus, thrownError) {
+				alert("Error: A '" + textStatus+ "' occurred.");
+			}
+		);
+		qr.done(//クエリが成功したときの処理
+			function (d) {
+				cs_data = getCSdata(d.results.bindings);
+				showCS(cs_data);
+			}
+		);
+
+
+//SPARQLの結果からCytoScape用のデータを作成する【<指定した主語> ?p ?o】用
+function getCSdata(data){	
+	console.log(JSON.stringify(data));
+				
+	var test_nodes = new Array(6);
+	var test_edges = new Array(5);
+	
+	test_nodes[0] = { "data": { "id": "主語" } };
+
+	// ?o に対応するノードを作成
+	for(var i=0 ; i < data.length ; i++){
+		var Obj = data[i]["o"].value;
+    	test_nodes[i+1] = { "data": { "id": Obj } };
+    	test_edges[i] = { "data": { "source": "主語", "target": Obj } }; 
+	}
+	
+	var cs_data ={"nodes":test_nodes, "edges":test_edges };
+	
+	return cs_data;
+}
+
+//データをCytoScapeで表示する関数
+function showCS(cs_data){
+	var cy = window.cy = cytoscape({
+	  container: document.getElementById('cy'),
+
+	  boxSelectionEnabled: false,
+	  autounselectify: true,
+
+	  layout: {
+	    name: 'dagre'
+	  },
+	  style: [
+	    {
+	      selector: 'node',
+	      style: {
+	        'content': 'data(id)',  /* must be specified if you want to display the node text */
+	        /**
+	        'text-opacity': 0.5,
+	        'text-valign': 'center',
+	        'text-halign': 'right',
+	        */
+	        'background-color': '#11479e'
+	      }
+	    },
+	    {
+	      selector: 'edge',
+	      style: {
+	        'target-arrow-shape': 'triangle',
+	        'curve-style': 'bezier',
+	        'target-arrow-color': '#9dbaea',
+	        'width': 4,
+	        'line-color': '#9dbaea',
+	      }
+	    }
+	  ],
+	  elements: cs_data
+	});
+}
+
+</script>
+
+</body>
+</html>
